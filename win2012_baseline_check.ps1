@@ -1,6 +1,8 @@
 ﻿<#
 Author: JC (@chroblert)
 Author: JC0o0l (@chroblert)
+Mail: jerryzvs@163.com
+wechat: Chroblert_Jerrybird(信安札记)
 #>
 chcp 65001
 function Get-BasicInfo{
@@ -378,6 +380,7 @@ function Get-SecureOptionCheckRes{
 	Param(
 		[System.Collections.ArrayList]$secInfoArray
 	)
+	$
 }
 
 
@@ -387,6 +390,8 @@ Write-Host "|       Windows baseline check   |"
 Write-Host "|         Author:JC0o0l          |"
 Write-Host "|         version:1.0            |"
 Write-Host "|         Date:20200103          |"
+Write-Host "|         Mail:jerryzvs@163.com  |"
+Write-Host "|      Wechat:Chroblert_Jerrybird|"
 Write-Host "=================================="
 Get-BasicInfo
 $secInfoArray=Get-SecInfo
