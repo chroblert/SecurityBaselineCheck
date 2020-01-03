@@ -380,7 +380,150 @@ function Get-SecureOptionCheckRes{
 	Param(
 		[System.Collections.ArrayList]$secInfoArray
 	)
-	$
+	$stEnableGuestAccount=0
+	$stLimitBlankPasswordUse=1
+	$stNewAdministratorName="administrator"
+	$stNewGuestName="guest"
+	$stDontDisplayLastUserName=1
+	$stDisableCAD=0
+	$stInactivityTimeoutSecs=900
+	$stEnablePlainTextPassword=0
+	$stAutoDisconnect=15
+	$stNoLMHash=1
+	$stLSAAnonymousNameLookup=0
+	$stRestrictAnonymousSAM=1
+	$stRestrictAnonymous=1
+	$stClearPageFileAtShutdown=0
+	# 确保“账户：来宾账户状态”值为已禁用
+	$enableGuestAccount=(Write-Output $secInfoArray|Select-String -Pattern "^EnableGuestAccount").ToString().Split("=")[1].Trim()
+	if($enableGuestAccount -eq $stEnableGuestAccount){
+		$enableGuestAccount="False"
+		Write-Host "[-] EnableGuestAccount value should be $stEnableGuestAccount" -ForegroundColor Red
+	}else{
+		$enableGuestAccount="True"
+	}
+	# 确保“账户：限制使用空密码的本地账户只能使用控制台登录”值为“enabled”
+	$limitBlankPasswordUse=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\LimitBlankPasswordUse" -Quiet)
+	if($limitBlankPasswordUse){
+		$limitBlankPasswordUse=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\LimitBlankPasswordUse").ToString().Split("=")[1].Split(",")[1]
+		if($limitBlankPasswordUse -eq $stLimitBlankPasswordUse){
+			$limitBlankPasswordUse="True"
+		}else{
+			$limitBlankPasswordUse="False"
+			Write-Host "[-] LimitBlankPasswordUse value should be $stLimitBlankPasswordUse" -ForegroundColor Red
+		}
+	}else{
+		$limitBlankPasswordUse="False"
+		Write-Host "[-] LimitBlankPasswordUse value should be $stLimitBlankPasswordUse" -ForegroundColor Red
+	}
+	# 配置“账户：重命名系统管理员账户” True:已重命名；False：未重命名
+	$newAdministratorName=(Write-Output $secInfoArray|Select-String -Pattern "^NewAdministratorName" -Quiet)
+	if($newAdministratorName){
+		$newAdministratorName=(Write-Output $secInfoArray|Select-String -Pattern "^NewAdministratorName").ToString().Split("=")[1].Split("""")[1].Split("""")[0]
+		if($newAdministratorName -eq $stNewAdministratorName){
+			$newAdministratorName="False"
+			Write-Host [-] "NewAdministratorName value should not be $stNewAdministratorName" -ForegroundColor Red
+		}else{
+			$newAdministratorName="True"
+		}
+	}else{
+		$newAdministratorName="False"
+		Write-Host [-] "NewAdministratorName value should not be $stNewAdministratorName" -ForegroundColor Red
+	}
+	# 配置“账户：重命名来宾账户” True:已重命名；False：未重命名
+	$newGuestName=(Write-Output $secInfoArray|Select-String -Pattern "^NewGuestName" -Quiet)
+	if($newGuestName){
+		$newGuestName=(Write-Output $secInfoArray|Select-String -Pattern "^NewGuestName").ToString().Split("=")[1].Split("""")[1].Split("""")[0]
+		if($newGuestName -eq $stNewGuestName){
+			$newGuestName="False"
+			Write-Host [-] "NewGuestName value should not be $stNewGuestName" -ForegroundColor Red
+		}else{
+			$newGuestName="True"
+		}
+	}else{
+		$newGuestName="False"
+		Write-Host [-] "NewGuestName value should not be $stNewGuestName" -ForegroundColor Red
+	}
+	# 确保“交互式登录：不显示上次登录用户名”值为“Enabled”
+	$dontDisplayLastUserName=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\DontDisplayLastUserName" -Quiet)
+	if($dontDisplayLastUserName){
+		$dontDisplayLastUserName=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\DontDisplayLastUserName").ToString().Split("=")[1].Split(",")[1]
+		if($dontDisplayLastUserName -eq $stDontDisplayLastUserName){
+			$dontDisplayLastUserName="True"
+		}else{
+			$dontDisplayLastUserName="False"
+			Write-Host "[-] DontDisplayLastUserName value should be $stDontDisplayLastUserName" -ForegroundColor Red
+		}
+	}else{
+		$dontDisplayLastUserName="False"
+		Write-Host "[-] DontDisplayLastUserName value should be $stDontDisplayLastUserName" -ForegroundColor Red
+	}
+	# 确保”交互式登录：无需按Ctrl+Alt+Del”值为“Disabled”
+	$disableCAD=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\DisableCAD" -Quiet)
+	if($disableCAD){
+		$disableCAD=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\DisableCAD").ToString().Split("=")[1].Split(",")[1]
+		if($disableCAD -eq $stDisableCAD){
+			$disableCAD="True"
+		}else{
+			$disableCAD="False"
+			Write-Host "[-] DisableCAD value should be $stDisableCAD" -ForegroundColor Red
+		}
+	}else{
+		$disableCAD="False"
+		Write-Host "[-] DisableCAD value should be $stDisableCAD" -ForegroundColor Red
+	}
+	# 确保“交互式登录：计算机不活动限制”值为900或更少 False:该项值不存在
+	$inactivityTimeoutSecs=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\DisableCAD" -Quiet)
+	if($inactivityTimeoutSecs){
+		$inactivityTimeoutSecs=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\DisableCAD").ToString().Split("=")[1].Split(",")[1]
+		if($inactivityTimeoutSecs -gt $stInactivityTimeoutSecs){
+			Write-Host "[-] InactivityTimeoutSecs value should less than $stInactivityTimeoutSecs" -ForegroundColor Red
+		}
+	}else{
+		Write-Host "[-] InactivityTimeoutSecs value should less than $stInactivityTimeoutSecs" -ForegroundColor Red
+		$inactivityTimeoutSecs="False"
+	}
+	# 确保“Microsoft网络客户端：将未加密的密码发送到第三方SMB服务器”值为“Disabled”
+	$enablePlainTextPassword=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\System\\CurrentControlSet\\Services\\LanmanWorkstation\\Parameters\\EnablePlainTextPassword" -Quiet)
+	if($enablePlainTextPassword){
+		$enablePlainTextPassword=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\System\\CurrentControlSet\\Services\\LanmanWorkstation\\Parameters\\EnablePlainTextPassword").ToString().Split("=")[1].Split(",")[1]
+		if($enablePlainTextPassword -eq $stEnablePlainTextPassword){
+			$enablePlainTextPassword="True"
+		}else{
+			$enablePlainTextPassword="False"
+			Write-Host "[-] EnablePlainTextPassword value should be $stEnablePlainTextPassword" -ForegroundColor Red
+		}
+	}else{
+		$enablePlainTextPassword="False"
+		Write-Host "[-] EnablePlainTextPassword value should be $stEnablePlainTextPassword" -ForegroundColor Red
+	}
+	# 确保“Microsoft网络服务器：暂停会话前所需的空闲时间数量”值为15分钟或更少，但不为0 False:该项值不存在
+	$autoDisconnect=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\System\\CurrentControlSet\\Services\\LanmanWorkstation\\Parameters\\AutoDisconnect" -Quiet)
+	if($autoDisconnect){
+		$autoDisconnect=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\System\\CurrentControlSet\\Services\\LanmanWorkstation\\Parameters\\AutoDisconnect").ToString().Split("=")[1].Split(",")[1]
+		if($autoDisconnect -gt $stAutoDisconnect){
+			Write-Host "[-] InactivityTimeoutSecs value should less than $stInactivityTimeoutSecs" -ForegroundColor Red
+		}
+	}else{
+		$autoDisconnect="False"
+		Write-Host "[-] AutoDisconnect value should be $stAutoDisconnect" -ForegroundColor Red
+	}
+	# 确保“网络安全：在下一次改变密码时不存储LAN管理器哈希值”值为“Enabled”
+	$noLMHash=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\NoLMHash" -Quiet)
+	if($noLMHash){
+		$noLMHash=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\NoLMHash").ToString().Split("=")[1].Split(",")[1]
+		if($noLMHash -eq $stNoLMHash){
+			$noLMHash="True"
+		}else{
+			$noLMHash="False"
+			Write-Host "[-] NoLMHash value should be $stNoLMHash" -ForegroundColor Red
+		}
+	}else{
+		$noLMHash="False"
+		Write-Host "[-] NoLMHash value should be $stNoLMHash" -ForegroundColor Red
+	}
+	# 确保“网络访问：允许匿名SID/名称转换”值为“Disabled"
+
 }
 
 
@@ -401,3 +544,4 @@ $audit_check_res=Get-AuditPolicyCheckRes $secInfoArray
 #Write-Host $audit_check_res
 $userright_check_res=Get-UserRightPolicyCheckRes $secInfoArray
 #Write-Host $userright_check_res
+Get-SecureOptionCheckRes $secInfoArray
