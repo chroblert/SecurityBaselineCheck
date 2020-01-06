@@ -6,13 +6,14 @@ wechat: Chroblert_Jerrybird(信安札记)
 #>
 chcp 65001
 function Get-BasicInfo{
+	$scanTime=Get-date -Format 'yyyy-M-d H:m:s'
 	$hostname = hostname
 	Write-Host $hostname
 	$ipList = ""
 	$macaddr = ""
 	foreach($line in ipconfig /all|Select-String -Pattern "^\s*IPv4"){ 
 		$line=$line.ToString().split(":")[1].replace("(","\(").replace(")","\)")
-		$context = (ipconfig /all |Select-String -Pattern $line -Context 6,0).Context[0]
+		$context = (ipconfig /all |Select-String -Pattern $line -Context 10,0).Context[0]
 		if ($context.Precontext|Select-String "VMware" -Quiet){
 			continue	
 		}
@@ -26,13 +27,16 @@ function Get-BasicInfo{
 		}
 		$ipList = $ipList + $line.ToString().split("\")[0].trim() + ";"
 	}
+	Write-Host scanTime:$scanTime
 	Write-Host hostname:$hostname
 	Write-Host macaddr: $macaddr 
 	Write-Host ipList : $ipList 
+	$basic_info="{""scanTime"":""$scanTime"",""hostname"":""$hostname"",""macaddr"":""$macaddr"",""ipList"":""$ipList""}"
+	return $basic_info
 }
 function Get-SecInfo{
 	$secinfo=""
-	SecEdit.exe /export /cfg sec.inf 
+	SecEdit.exe /export /cfg sec.inf /Quiet
 	$secInfoArray=Get-Content .\sec.inf
 	foreach ($line in $secInfoArray){
 		$secinfo = $secinfo + $line.ToString() + ";"
@@ -473,9 +477,9 @@ function Get-SecureOptionCheckRes{
 		Write-Host "[-] DisableCAD value should be $stDisableCAD" -ForegroundColor Red
 	}
 	# 确保“交互式登录：计算机不活动限制”值为900或更少 False:该项值不存在
-	$inactivityTimeoutSecs=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\DisableCAD" -Quiet)
+	$inactivityTimeoutSecs=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\InactivityTimeoutSecs" -Quiet)
 	if($inactivityTimeoutSecs){
-		$inactivityTimeoutSecs=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\DisableCAD").ToString().Split("=")[1].Split(",")[1]
+		$inactivityTimeoutSecs=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\InactivityTimeoutSecs").ToString().Split("=")[1].Split(",")[1]
 		if($inactivityTimeoutSecs -gt $stInactivityTimeoutSecs){
 			Write-Host "[-] InactivityTimeoutSecs value should less than $stInactivityTimeoutSecs" -ForegroundColor Red
 		}
@@ -522,10 +526,87 @@ function Get-SecureOptionCheckRes{
 		$noLMHash="False"
 		Write-Host "[-] NoLMHash value should be $stNoLMHash" -ForegroundColor Red
 	}
-	# 确保“网络访问：允许匿名SID/名称转换”值为“Disabled"
+	# 确保“网络访问：允许匿名SID/名称转换”值为“Disabled" False:Disabled True:Enabled
+	$lsaAnonymousNameLookup=(Write-Output $secInfoArray|Select-String -Pattern "LSAAnonymousNameLookup" -Quiet)
+	if($lsaAnonymousNameLookup){
+		$lsaAnonymousNameLookup=(Write-Output $secInfoArray|Select-String -Pattern "LSAAnonymousNameLookup").ToString().Split("=")[1].Trim()
+		if($lsaAnonymousNameLookup -eq $stLSAAnonymousNameLookup){
+			$lsaAnonymousNameLookup="False"
+		}else{
+			$lsaAnonymousNameLookup="True"
+			Write-Host "[-] LSAAnonymousNameLookup value should be $stLSAAnonymousNameLookup" -ForegroundColor Red
+		}
+	}else{
+		$lsaAnonymousNameLookup="True"
+		Write-Host "[-] LSAAnonymousNameLookup value should be $stLSAAnonymousNameLookup" -ForegroundColor Red
+	}
+	# 确保“网络访问：不允许SAM账户的匿名枚举”值为“Enabled”
+	$restrictAnonymousSAM=(Write-Output $secInfoArray|Select-String -Pattern "^MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\RestrictAnonymousSAM" -Quiet)
+	if($restrictAnonymousSAM){
+		$restrictAnonymousSAM=(Write-Output $secInfoArray|Select-String -Pattern "^MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\RestrictAnonymousSAM").ToString().Split("=")[1].Split(",")[1]
+		if($restrictAnonymousSAM -eq $stRestrictAnonymousSAM){
+			$restrictAnonymousSAM="True"
+		}else{
+			$restrictAnonymousSAM="False"
+			Write-Host "[-] RestrictAnonymousSAM value should be $stRestrictAnonymousSAM" -ForegroundColor Red
+		}
+	}else{
+		$restrictAnonymousSAM="False"
+		Write-Host "[-] RestrictAnonymousSAM value should be $stRestrictAnonymousSAM" -ForegroundColor Red
+	}
+	# 确保“网络访问：不允许SAM账户和共享的匿名枚举”值为“Enabled”
+	$restrictAnonymous=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\RestrictAnonymous=" -Quiet)
+	if($restrictAnonymous){
+		$restrictAnonymous=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\System\\CurrentControlSet\\Control\\Lsa\\RestrictAnonymous=").ToString().Split("=")[1].Split(",")[1]
+		if($restrictAnonymous -eq $stRestrictAnonymous){
+			$restrictAnonymous="True"
+		}else{
+			$restrictAnonymous="False"
+			Write-Host "[-] RestrictAnonymous value should be $stRestrictAnonymous" -ForegroundColor Red
+		}
+	}else{
+		$restrictAnonymous="False"
+		Write-Host "[-] RestrictAnonymous value should be $stRestrictAnonymous" -ForegroundColor Red
+	}
+	# 确保“关机：允许系统在未登录前关机”值未“Disabled”
+	$clearPageFileAtShutdown=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\System\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\ClearPageFileAtShutdown" -Quiet)
+	if($clearPageFileAtShutdown){
+		$clearPageFileAtShutdown=(Write-Output $secInfoArray|Select-String -Pattern "MACHINE\\System\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\ClearPageFileAtShutdown").ToString().Split("=")[1].Split(",")[1]
+		if($clearPageFileAtShutdown -eq $stClearPageFileAtShutdown){
+			$clearPageFileAtShutdown="False"
+		}else{
+			$clearPageFileAtShutdown="True"
+			Write-Host "[-] ClearPageFileAtShutdown value should be $stClearPageFileAtShutdown" -ForegroundColor Red
+		}
+	}else{
+		$clearPageFileAtShutdown="True"
+		Write-Host "[-] ClearPageFileAtShutdown value should be $stClearPageFileAtShutdown" -ForegroundColor Red
+	}
+	$secureoption_check_res="{""enableGuestAccount"":""$enableGuestAccount"",""limitBlankPasswordUse"":""$limitBlankPasswordUse"",""newAdministratorName"":""$newAdministratorName"",""newGuestName"":""$newGuestName"",""dontDisplayLastUserName"":""$dontDisplayLastUserName"",""disableCAD"":""$disableCAD"",""inactivityTimeoutSecs"":""$inactivityTimeoutSecs"",""enablePlainTextPassword"":""$enablePlainTextPassword"",""autoDisconnect"":""$autoDisconnect"",""noLMHash"":""$noLMHash"",""lsaAnonymousNameLookup"":""$lsaAnonymousNameLookup"",""restrictAnonymousSAM"":""$restrictAnonymousSAM"",""restrictAnonymous"":""$restrictAnonymous"",""clearPageFileAtShutdown"":""$clearPageFileAtShutdown""}"
 
+	return $secureoption_check_res
 }
 
+function Get-PortSecureCheckRes{
+	$key="HKLM\SYSTEM\CurrentControlSet\Control\Terminal server\WinStations\RDP-Tcp"
+	$name="Portnumber"
+	$rdpPort=(Get-ItemProperty -Path "Registry::$key" -ErrorAction:SilentlyContinue).$name
+	if($rdpPort -eq "3389"){
+		Write-Host "[-] RDPPort should not be 3389" -ForegroundColor Red
+	}
+	$portsecure_check_res="{""rdpPort"":""$rdpPort""}"
+	return $portsecure_check_res
+}
+function Get-SystemSecureCheckRes{
+	$key="HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer"
+	$name="NoDriveTypeAutoRun"
+	$autoRunRes=(Get-ItemProperty -Path "Registry::$key" -ErrorAction:SilentlyContinue).$name
+	if(-not $autoRunRes){
+		$autoRunRes="False"
+	}
+	$systemsecure_check_res="{""autoRunRes"":""$autoRunRes""}"
+	return $systemsecure_check_res
+}
 
 
 Write-Host "=================================="
@@ -536,7 +617,7 @@ Write-Host "|         Date:20200103          |"
 Write-Host "|         Mail:jerryzvs@163.com  |"
 Write-Host "|      Wechat:Chroblert_Jerrybird|"
 Write-Host "=================================="
-Get-BasicInfo
+$basic_info=Get-BasicInfo
 $secInfoArray=Get-SecInfo
 $account_check_res=Get-AccountPolicyCheckRes $secInfoArray
 #Write-Host $account_check_res
@@ -544,4 +625,13 @@ $audit_check_res=Get-AuditPolicyCheckRes $secInfoArray
 #Write-Host $audit_check_res
 $userright_check_res=Get-UserRightPolicyCheckRes $secInfoArray
 #Write-Host $userright_check_res
-Get-SecureOptionCheckRes $secInfoArray
+$secureoption_check_res=Get-SecureOptionCheckRes $secInfoArray
+#Write-Host $secureoption_check_res
+$portsecure_check_res=Get-PortSecureCheckRes
+#Write-Host $portsecure_check_res
+$systemsecure_check_res=Get-SystemSecureCheckRes
+#Write-Host $systemsecure_check_res
+
+#$window_check_res="{""secInfoArray"":$secInfoArray,""account_check_res"":$account_check_res,""audit_check_res"":$audit_check_res,""userright_check_res"":$userright_check_res,""secureoption_check_res"":$secureoption_check_res,""portsecure_check_res"":$portsecure_check_res,""systemsecure_check_res"":$systemsecure_check_res}"
+$window_check_res="{""basic_info"":$basic_info,""account_check_res"":$account_check_res,""audit_check_res"":$audit_check_res,""userright_check_res"":$userright_check_res,""secureoption_check_res"":$secureoption_check_res,""portsecure_check_res"":$portsecure_check_res,""systemsecure_check_res"":$systemsecure_check_res}"
+Write-Host $window_check_res
