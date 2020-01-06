@@ -8,7 +8,7 @@ chcp 65001
 function Get-BasicInfo{
 	$scanTime=Get-date -Format 'yyyy-M-d H:m:s'
 	$hostname = hostname
-	Write-Host $hostname
+	$osVersion=Get-WmiObject -Class Win32_OperatingSystem | Select-Object -ExpandProperty Caption
 	$ipList = ""
 	$macaddr = ""
 	foreach($line in ipconfig /all|Select-String -Pattern "^\s*IPv4"){ 
@@ -28,10 +28,11 @@ function Get-BasicInfo{
 		$ipList = $ipList + $line.ToString().split("\")[0].trim() + ";"
 	}
 	Write-Host scanTime:$scanTime
+	Write-Host osVersion:$osVersion
 	Write-Host hostname:$hostname
 	Write-Host macaddr: $macaddr 
 	Write-Host ipList : $ipList 
-	$basic_info="{""scanTime"":""$scanTime"",""hostname"":""$hostname"",""macaddr"":""$macaddr"",""ipList"":""$ipList""}"
+	$basic_info="{""scanTime"":""$scanTime"",""osVersion"":""$osVersion"",""hostname"":""$hostname"",""macaddr"":""$macaddr"",""ipList"":""$ipList""}"
 	return $basic_info
 }
 function Get-SecInfo{
@@ -95,7 +96,7 @@ function Check-PasswordPolicy{
 	if($minimumPasswordLength -lt $stMinimumPasswordLength){
 		Write-Host MinimumPasswordLength less than $stMinimumPasswordLength -ForegroundColor Red
 	}
-	$password_check_info="{""passwordHistorySize"":""$passwordHistorySize"",""maximumPasswordAge"":""$maximumPasswordAge"",""minimumPasswordAge"":$minimumPasswordAge"",""passwordComplexity"":""$passwordComplexity"",""clearTextPassword"":""$clearTextPassword"",""minimumPasswordLength"":""$minimumPasswordLength""}"
+	$password_check_info="{""passwordHistorySize"":""$passwordHistorySize"",""maximumPasswordAge"":""$maximumPasswordAge"",""minimumPasswordAge"":""$minimumPasswordAge"",""passwordComplexity"":""$passwordComplexity"",""clearTextPassword"":""$clearTextPassword"",""minimumPasswordLength"":""$minimumPasswordLength""}"
 	#Write-Host $password_check_info
 	return $password_check_info
 
@@ -204,27 +205,27 @@ function  Get-AuditPolicyCheckRes {
 	if($auditLogonEvents -lt $stAuditLogonEvents){
 		Write-Host [-] AuditLogonEvents value should be $stAuditLogonEvents -ForegroundColor Red
 	}
-	$auditObjectAccess=(Write-Output $secInfoArray|Select-String -Pattern "^AuditObjectAccess").ToString().Split("=") -replace "\s",""
+	$auditObjectAccess=(Write-Output $secInfoArray|Select-String -Pattern "^AuditObjectAccess").ToString().Split("=")[1] -replace "\s",""
 	if($auditObjectAccess -lt $stAuditObjectAccess){
 		Write-Host [-] AuditObjectAccess value should be $stAuditObjectAccess -ForegroundColor Red
 	}
-	$auditProcessTracking=(Write-Output $secInfoArray|Select-String -Pattern "^AuditProcessTracking").ToString().Split("=") -replace "\s",""
+	$auditProcessTracking=(Write-Output $secInfoArray|Select-String -Pattern "^AuditProcessTracking").ToString().Split("=")[1] -replace "\s",""
 	if($auditProcessTracking -lt $stAuditProcessTracking){
 		Write-Host [-] AuditProcessTracking value should be $stAuditProcessTracking -ForegroundColor Red
 	}
-	$auditDSAccess=(Write-Output $secInfoArray|Select-String -Pattern "^AuditDSAccess").ToString().Split("=") -replace "\s",""
+	$auditDSAccess=(Write-Output $secInfoArray|Select-String -Pattern "^AuditDSAccess").ToString().Split("=")[1] -replace "\s",""
 	if($auditDSAccess -lt $stAuditDSAccess){
 		Write-Host [-] AuditDSAccess value should be $stAuditDSAccess -ForegroundColor Red
 	}
-	$auditSystemEvents=(Write-Output $secInfoArray|Select-String -Pattern "^AuditSystemEvents").ToString().Split("=") -replace "\s",""
+	$auditSystemEvents=(Write-Output $secInfoArray|Select-String -Pattern "^AuditSystemEvents").ToString().Split("=")[1] -replace "\s",""
 	if($auditSystemEvents -lt $stAuditSystemEvents){
 		Write-Host [-] AuditSystemEvents value should be $stAuditSystemEvents -ForegroundColor Red
 	}
-	$auditAccountLogon=(Write-Output $secInfoArray|Select-String -Pattern "^AuditAccountLogon").ToString().Split("=") -replace "\s",""
+	$auditAccountLogon=(Write-Output $secInfoArray|Select-String -Pattern "^AuditAccountLogon").ToString().Split("=")[1] -replace "\s",""
 	if($auditAccountLogon -lt $stAuditAccountLogon){
 		Write-Host [-] AuditAccountLogon value should be $stAuditAccountLogon -ForegroundColor Red
 	}
-	$auditAccountManage=(Write-Output $secInfoArray|Select-String -Pattern "^AuditAccountManage").ToString().Split("=") -replace "\s",""
+	$auditAccountManage=(Write-Output $secInfoArray|Select-String -Pattern "^AuditAccountManage").ToString().Split("=")[1] -replace "\s",""
 	if($auditAccountManage -lt $stAuditAccountManage){
 		Write-Host [-] AuditAccountManage value should be $stAuditAccountManage -ForegroundColor Red
 	}
@@ -634,4 +635,5 @@ $systemsecure_check_res=Get-SystemSecureCheckRes
 
 #$window_check_res="{""secInfoArray"":$secInfoArray,""account_check_res"":$account_check_res,""audit_check_res"":$audit_check_res,""userright_check_res"":$userright_check_res,""secureoption_check_res"":$secureoption_check_res,""portsecure_check_res"":$portsecure_check_res,""systemsecure_check_res"":$systemsecure_check_res}"
 $window_check_res="{""basic_info"":$basic_info,""account_check_res"":$account_check_res,""audit_check_res"":$audit_check_res,""userright_check_res"":$userright_check_res,""secureoption_check_res"":$secureoption_check_res,""portsecure_check_res"":$portsecure_check_res,""systemsecure_check_res"":$systemsecure_check_res}"
-Write-Host $window_check_res
+#Write-Host $window_check_res
+Invoke-RestMethod -Uri "http://192.168.3.24:8888/baseline/windows_scan_res_report/" -Method Post -ContentType "application/json" -Body $window_check_res
