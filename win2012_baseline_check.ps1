@@ -94,7 +94,7 @@ function Check-PasswordPolicy{
 	}
 	$minimumPasswordLength=(Write-Output $secInfoArray|Select-String -Pattern "^MinimumPasswordLength").ToString().Split("=")[1] -replace "\s",""
 	if($minimumPasswordLength -lt $stMinimumPasswordLength){
-		Write-Host MinimumPasswordLength less than $stMinimumPasswordLength -ForegroundColor Red
+		Write-Host [-] MinimumPasswordLength less than $stMinimumPasswordLength -ForegroundColor Red
 	}
 	$password_check_info="{""passwordHistorySize"":""$passwordHistorySize"",""maximumPasswordAge"":""$maximumPasswordAge"",""minimumPasswordAge"":""$minimumPasswordAge"",""passwordComplexity"":""$passwordComplexity"",""clearTextPassword"":""$clearTextPassword"",""minimumPasswordLength"":""$minimumPasswordLength""}"
 	#Write-Host $password_check_info
@@ -128,18 +128,31 @@ function Check-AccountLockoutPolicy{
 	$stLockoutDuration=15
 	$stLockoutBadCount=5
 	$stResetLockoutCount=15
-	$lockoutDuration=(Write-Output $secInfoArray|Select-String -Pattern "^LockoutDuration").ToString().Split("=")[1] -replace "\s",""
-	if($lockoutDuration -lt $stLockoutDuration){
-		Write-Host [-] LockoutDuration less than $stLockoutDuration -ForegroundColor Red
+	$lockoutDuration=(Write-Output $secInfoArray|Select-String -Pattern "^LockoutDuration" -Quiet)
+	if($lockoutDuration){
+		$lockoutDuration=(Write-Output $secInfoArray|Select-String -Pattern "^LockoutDuration").ToString().Split("=")[1] -replace "\s",""
+		if($lockoutDuration -lt $stLockoutDuration){
+			Write-Host [-] LockoutDuration less than $stLockoutDuration -ForegroundColor Red
+		}
+	}else{
+		$lockoutDuration=0
 	}
+	
 	$lockoutBadCount=(Write-Output $secInfoArray|Select-String -Pattern "^LockoutBadCount").ToString().Split("=")[1] -replace "\s",""
 	if($lockoutBadCount -lt $stLockoutBadCount){
 		Write-Host [-] LockoutBadCount less than $stLockoutBadCount -ForegroundColor Red
 	}
-	$resetLockoutCount=(Write-Output $secInfoArray|Select-String -Pattern "^ResetLockoutCount").ToString().Split("=")[1] -replace "\s",""
-	if($resetLockoutCount -lt $stLockoutDuration -or  $resetLockoutCount -gt $lockoutDuration){
-		Write-Host [-] ResetLockoutCount great than $stResetLockoutCount or less than $stLockoutDuration
+
+	$resetLockoutCount=(Write-Output $secInfoArray|Select-String -Pattern "^ResetLockoutCount" -Quiet)
+	if($resetLockoutCount){
+		$resetLockoutCount=(Write-Output $secInfoArray|Select-String -Pattern "^ResetLockoutCount").ToString().Split("=")[1] -replace "\s",""
+		if($resetLockoutCount -lt $stLockoutDuration -or  $resetLockoutCount -gt $lockoutDuration){
+			Write-Host [-] ResetLockoutCount great than $stResetLockoutCount or less than $stLockoutDuration
+		}
+	}else{
+		$resetLockoutCount=0
 	}
+	
 	$account_lockout_info="{""lockoutDuration"":""$lockoutDuration"",""lockoutBadCount"":""$lockoutBadCount"",""resetLockoutCount"":""$resetLockoutCount""}"
 	return $account_lockout_info
 
@@ -260,6 +273,7 @@ function Get-UserRightPolicyCheckRes{
 		$seMachineAccountPrivilegeIFOnlySpecifiedUserOrArray="True"
 	}else{
 		$flag=0
+		$seMachineAccountPrivilegeIFOnlySpecifiedUserOrArray=""
 		foreach($sid in ((Write-Output $secInfoArray|Select-String -Pattern "^SeMachineAccountPrivilege").ToString().Split("=")[1].Trim()).Split(",")){
 			$sidSuffix=$sid.split("-")[-1].ToString()
 			#Write-Host $sidSuffix
@@ -346,6 +360,7 @@ function Get-UserRightPolicyCheckRes{
 	}else{
 		$flag=0
 		$count=0
+		$seRemoteShutdownPrivilegeIFOnlySpecifiedUserOrArray=""
 		foreach($sid in ((Write-Output $secInfoArray|Select-String -Pattern "^SeRemoteShutdownPrivilege").ToString().Split("=")[1].Trim()).Split(",")){
 			$count=$count+1
 			$sidSuffix=$sid.split("-")[-1].ToString()
@@ -614,9 +629,7 @@ Write-Host "=================================="
 Write-Host "|       Windows baseline check   |"
 Write-Host "|         Author:JC0o0l          |"
 Write-Host "|         version:1.0            |"
-Write-Host "|         Date:20200103          |"
 Write-Host "|         Mail:jerryzvs@163.com  |"
-Write-Host "|      Wechat:Chroblert_Jerrybird|"
 Write-Host "=================================="
 $basic_info=Get-BasicInfo
 $secInfoArray=Get-SecInfo
