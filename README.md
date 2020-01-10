@@ -53,5 +53,7 @@ Windows Agent：
   - 修改部分代码
   - 可以上传json串
 - 20200108 更新AssetManage
-  - 完善Windows基线检查图形展示界面
+  - 增加Windows基线检查图形展示界面
+- 20200110 更新AssetManage，更新Linux基线检查脚本
+  - 增加完善Linux基线检查图形展示界面
 
