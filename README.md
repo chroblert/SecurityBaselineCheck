@@ -66,7 +66,7 @@ Windows Agent：
 
 源码地址位于：[AssetManage](https://github.com/chroblert/AssetManage)
 
-docker镜像位于：
+docker镜像位于：`registry.cn-hangzhou.aliyuncs.com/jc0o0l/assetmanage:2.0`
 
 ```shell
 # 提前安装最新版SQLite3.30,python3.6
