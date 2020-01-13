@@ -62,7 +62,11 @@ Windows Agent：
 
 ## 0x03 使用步骤
 
-1\. 下载AssetManage这个后端展示项目,地址位于：[AssetManage](https://github.com/chroblert/AssetManage)
+1\. 下载AssetManage这个后端展示项目,
+
+源码地址位于：[AssetManage](https://github.com/chroblert/AssetManage)
+
+docker镜像位于：
 
 ```shell
 # 提前安装最新版SQLite3.30,python3.6
