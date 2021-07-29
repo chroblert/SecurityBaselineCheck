@@ -1,6 +1,6 @@
 # SecurityBaselineCheck
 
-<h1>脚本请到AssetManage项目下的Agent目录下去下载</h1>
+[<h1>脚本请到AssetManage项目下的Agent目录下去下载<h1>](https://github.com/chroblert/AssetManage/tree/master/Agent)
 
 ## 0x01 介绍
 
